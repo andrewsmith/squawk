@@ -11,15 +11,26 @@
           inherit system;
           # libpg_query has systems = x86_64, which is probably a bug
           config.allowUnsupportedSystem = true;
-          overlays = [
-            overlay
-            pin_libpg_query
-          ];
+          overlays = [ overlay ];
         };
         overlay = (final: prev:
           let inherit (prev) lib;
           in
           {
+            # Pin libpg_query to the latest 13-* release. Newer releases of
+            # libpg_query use PostgreSQL > 13's parser, which yields a slightly
+            # different AST than what Squawk currently supports, leading to
+            # invalid-statement errors for valid statements.
+            libpg_query13 = prev.libpg_query.overrideAttrs (_: rec {
+              version = "13-2.2.0";
+              src = final.fetchFromGitHub {
+                owner = "pganalyze";
+                repo = "libpg_query";
+                rev = version;
+                sha256 = "sha256-gEkcv/j8ySUYmM9lx1hRF/SmuQMYVHwZAIYOaCQWAFs=";
+              };
+            });
+
             squawk = final.rustPlatform.buildRustPackage {
               pname = "squawk";
               version = "0.19.0";
@@ -43,7 +54,7 @@
                 Security
               ]);
 
-              LIBPG_QUERY_PATH = final.libpg_query;
+              LIBPG_QUERY_PATH = final.libpg_query13;
 
               meta = with lib; {
                 description = "Linter for PostgreSQL, focused on migrations";
@@ -52,21 +63,6 @@
                 platforms = platforms.all;
               };
             };
-          });
-          # Pin libpg_query to the latest 13-* release. Newer releases of
-          # libpg_query use PostgreSQL > 13's parser, which yields a slightly
-          # different AST than what Squawk currently supports, leading to
-          # invalid-statement errors for valid statements.
-          pin_libpg_query = (final: prev: {
-            libpg_query = prev.libpg_query.overrideAttrs (_: rec {
-              version = "13-2.2.0";
-              src = final.fetchFromGitHub {
-                owner = "pganalyze";
-                repo = "libpg_query";
-                rev = version;
-                sha256 = "sha256-gEkcv/j8ySUYmM9lx1hRF/SmuQMYVHwZAIYOaCQWAFs=";
-              };
-            });
           });
       in
       {
