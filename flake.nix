@@ -11,7 +11,10 @@
           inherit system;
           # libpg_query has systems = x86_64, which is probably a bug
           config.allowUnsupportedSystem = true;
-          overlays = [ overlay ];
+          overlays = [
+            overlay
+            pin_libpg_query
+          ];
         };
         overlay = (final: prev:
           let inherit (prev) lib;
@@ -49,6 +52,21 @@
                 platforms = platforms.all;
               };
             };
+          });
+          # Pin libpg_query to the latest 13-* release. Newer releases of
+          # libpg_query use PostgreSQL > 13's parser, which yields a slightly
+          # different AST than what Squawk currently supports, leading to
+          # invalid-statement errors for valid statements.
+          pin_libpg_query = (final: prev: {
+            libpg_query = prev.libpg_query.overrideAttrs (_: rec {
+              version = "13-2.2.0";
+              src = final.fetchFromGitHub {
+                owner = "pganalyze";
+                repo = "libpg_query";
+                rev = version;
+                sha256 = "sha256-gEkcv/j8ySUYmM9lx1hRF/SmuQMYVHwZAIYOaCQWAFs=";
+              };
+            });
           });
       in
       {
