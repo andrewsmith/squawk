@@ -9,8 +9,6 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          # libpg_query has systems = x86_64, which is probably a bug
-          config.allowUnsupportedSystem = true;
           overlays = [ overlay ];
         };
         overlay = (final: prev:
